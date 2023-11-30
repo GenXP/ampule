@@ -1,0 +1,12 @@
+{
+  "scripts": {
+    "start": "node index.js"
+  },
+  "type": "module",
+  "dependencies": {
+    "microsoft-cognitiveservices-speech-sdk": "^1.33.1",
+    "readline": "^1.3.0",
+    "speaker": "^0.5.4",
+    "websocket": "^1.0.34"
+  }
+}

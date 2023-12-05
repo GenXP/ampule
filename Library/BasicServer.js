@@ -22,7 +22,7 @@ export class BasicServer extends websocket.server {
     if (!this.allowedOrigin(request.origin)) {
       request.reject();
       if (config.Log > 0) {
-        console.log(new Date() + " Connection from origin " + request.origin + " rejected.");
+        console.log(`SERVER:`, new Date() + " Connection from origin " + request.origin + " rejected.");
       }
       return;
     }
@@ -30,7 +30,7 @@ export class BasicServer extends websocket.server {
     // I don't care.
     this.connection = request.accept("echo-protocol", request.origin);
     if (config.Log > 0) {
-      console.log(new Date() + " Connection accepted.");
+      console.log(`SERVER:`, new Date() + " Connection accepted.");
     }
     this.connection.on("message", this.onMessage.bind(this));
     this.connection.on("close", this.onClose.bind(this));
@@ -71,9 +71,9 @@ export class BasicServer extends websocket.server {
 
   onClose(reasonCode, description) {
     if (config.Log > 0) {
-      console.log(new Date() + ` Peer ${this.remoteAddress} disconnected.`);
+      console.log(`SERVER: `, new Date() + ` Peer ${this.remoteAddress} disconnected.`);
       if (config.Log > 1) {
-        console.log(`\tReason: ${reasonCode}\n\tDescription: ${description}`);
+        console.log(`SERVER:\tReason: ${reasonCode}\n\tDescription: ${description}`);
       }
     }
   }

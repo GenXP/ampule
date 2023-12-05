@@ -8,21 +8,28 @@ const config = new Configuration();
 
 export class VoiceManager {
   player = null;
+  speakers = new Set()
 
   constructor(player) {
     this.player = player;
   }
 
-  async Speak(text) {
+  async Speak(message) {
     var audioFile = "tmp-audio.wav";
-    var speechKey = config.Get("key");
-    var speechRegion = config.Get("region");
-    var voicetype = config.Get("voice");
+    var speechKey = message.key || config.Get("key");
+    var speechRegion = message.region || config.Get("region");
+    var voicetype = message.voice || config.Get("voice");
     const speechConfig = SpeechConfig.fromSubscription(speechKey, speechRegion);
     speechConfig.speechSynthesisVoiceName = voicetype;
     const audioConfig = AudioConfig.fromAudioFileOutput(audioFile);
     let synthesizer = new SpeechSynthesizer(speechConfig, audioConfig);
     let weakSelf = this;
+
+    // Cancel and current speaking
+    for (const speaker of weakSelf.currentSpeakers) {
+      speaker.close();
+      this.currentSpeakers.delete(speaker);
+    }
 
     return new Promise(function (resolve, reject) {
 
@@ -45,6 +52,7 @@ export class VoiceManager {
         async function (result) {
           if (result.reason === ResultReason.SynthesizingAudioCompleted) {
             let player = new Speaker({ channels: config.Get("channels"), sampleRate: config.Get("sampleRate"), bitDepth: config.Get("bitDepth") });
+            weakSelf.currentSpeakers.add(player)
             const bufferStream = new PassThrough();
             bufferStream.end(Buffer.from(result.audioData));
             bufferStream.pipe(player);

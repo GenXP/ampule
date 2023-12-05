@@ -58,24 +58,8 @@ export class BasicClient extends websocket.client {
       console.log("WebSocket Connection Closed");
     }
   }
-
   async onMessage(message) {
     let objectMessage = message.utf8Data ? JSON.parse(message.utf8Data) : message.utf8Data;
-    // Reduce all values of objectMessage that are strings into a single array
-    let longestTextItem = Object.keys(objectMessage).reduce((acc, key) => {
-      if (typeof objectMessage[key] === "string") {
-        acc.push(objectMessage[key]);
-      }
-      return acc;
-    }, [])
-      .reduce((acc, key, i, self) => {
-        // Get the longest of all the strings
-        if (key.length > acc.length) {
-          acc = key;
-        }
-        return acc;
-      }, "");
-
     let responseDetails = { visemes: [] };
 
     if (objectMessage.hasOwnProperty("text")) {
@@ -83,20 +67,16 @@ export class BasicClient extends websocket.client {
         console.log(`Received: ${objectMessage.text}`);
       }
       try {
-        responseDetails.visemes = await this.voiceManager.Speak(objectMessage.text);
-        this.sendVisemes(responseDetails);
-      } catch (err) {
-        console.error(err);
-      }
-      return
-    }
-
-    if (longestTextItem?.length > 0) {
-      if (config.Log > 1) {
-        console.log(`Received: ${longestTextItem}`);
-      }
-      try {
-        responseDetails.visemes = await this.voiceManager.Speak(longestTextItem);
+        /**
+        *   Message {
+        *   "text": "string",
+        *   "locale": "string",
+        *   "region": "string",
+        *   "voice": "string",
+        *   "key": "string"
+        *  }
+        **/ 
+        responseDetails.visemes = await this.voiceManager.Speak(objectMessage);
         this.sendVisemes(responseDetails);
       } catch (err) {
         console.error(err);

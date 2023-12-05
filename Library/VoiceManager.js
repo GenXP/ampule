@@ -26,7 +26,7 @@ export class VoiceManager {
     let weakSelf = this;
 
     // Cancel and current speaking
-    for (const speaker of weakSelf.currentSpeakers) {
+    for (const speaker of Object.values(this.speakers)) {
       speaker.close();
       this.currentSpeakers.delete(speaker);
     }
@@ -36,7 +36,7 @@ export class VoiceManager {
       const ssml = `<speak version='1.0' xml:lang='en-US' xmlns='http://www.w3.org/2001/10/synthesis' xmlns:mstts='http://www.w3.org/2001/mstts'> \r\n \
             <voice name='${speechConfig.speechSynthesisVoiceName}'> \r\n \
                 <mstts:viseme type='redlips_front'/> \r\n \
-                ${text} \r\n \
+                ${message.text} \r\n \
             </voice> \r\n \
         </speak>`;
       let visemes = [];
@@ -52,7 +52,7 @@ export class VoiceManager {
         async function (result) {
           if (result.reason === ResultReason.SynthesizingAudioCompleted) {
             let player = new Speaker({ channels: config.Get("channels"), sampleRate: config.Get("sampleRate"), bitDepth: config.Get("bitDepth") });
-            weakSelf.currentSpeakers.add(player)
+            weakSelf.speakers.add(player)
             const bufferStream = new PassThrough();
             bufferStream.end(Buffer.from(result.audioData));
             bufferStream.pipe(player);

@@ -1,17 +1,33 @@
 "use strict";
 import { ResultReason, SpeechSynthesizer, SpeechConfig, AudioConfig } from "microsoft-cognitiveservices-speech-sdk";
-import { PassThrough } from "stream";
 import { Configuration } from "./Configuration.js";
+import AudioSource from "audiosource";
+import { StreamAudioContext as AudioContext } from "web-audio-engine";
+
 import Speaker from "speaker";
+import { randomUUID } from "crypto";
+
+import { pipeline } from "stream/promises";
+import { Readable, Transform } from "stream";
 
 const config = new Configuration();
 
 export class VoiceManager {
   player = null;
-  speakers = new Set()
+  speakers = []
 
   constructor(player) {
-    this.player = player;
+    this.player = new Speaker({ channels: config.Get("channels"), sampleRate: config.Get("sampleRate"), bitDepth: config.Get("bitDepth") });
+    this.speakers = [];
+  }
+
+  cancelPending() {
+    for (const speakerStub of this.speakers) {
+      // speaker.bufferStream.unpipe(speaker).end();
+      speakerStub.IsCancelled = true;
+      speakerStub.CancelledOn = new Date().getTime();
+    }
+    // this.speakers = this.speakers.filter(speakerStub => Math.abs(speakerStub.CancelledOn - new Date().getTime()) > 1000);
   }
 
   async Speak(message) {
@@ -25,12 +41,6 @@ export class VoiceManager {
     let synthesizer = new SpeechSynthesizer(speechConfig, audioConfig);
     let weakSelf = this;
 
-    // Cancel and current speaking
-    for (const speaker of Object.values(this.speakers)) {
-      speaker.close();
-      this.currentSpeakers.delete(speaker);
-    }
-
     return new Promise(function (resolve, reject) {
 
       const ssml = `<speak version='1.0' xml:lang='en-US' xmlns='http://www.w3.org/2001/10/synthesis' xmlns:mstts='http://www.w3.org/2001/mstts'> \r\n \
@@ -43,7 +53,7 @@ export class VoiceManager {
 
       synthesizer.visemeReceived = (s, e) => {
         if (config.Log > 1) {
-          console.log("(Viseme), Audio offset: " + e.audioOffset / 10000 + "ms. Viseme ID: " + e.visemeId);
+          // console.log("(Viseme), Audio offset: " + e.audioOffset / 10000 + "ms. Viseme ID: " + e.visemeId);
           visemes.push({ offset: e.audioOffset, id: e.visemeId });
         }
       };
@@ -51,11 +61,53 @@ export class VoiceManager {
       synthesizer.speakSsmlAsync(ssml,
         async function (result) {
           if (result.reason === ResultReason.SynthesizingAudioCompleted) {
-            let player = new Speaker({ channels: config.Get("channels"), sampleRate: config.Get("sampleRate"), bitDepth: config.Get("bitDepth") });
-            weakSelf.speakers.add(player)
-            const bufferStream = new PassThrough();
-            bufferStream.end(Buffer.from(result.audioData));
-            bufferStream.pipe(player);
+
+            if (weakSelf.speakers.length > 1) {
+              weakSelf.speakers.forEach((speakerStub, i) => {
+                weakSelf.speakers[i].audio_handle = null;
+                weakSelf.speakers[i].speaker = null;
+              })
+            }
+
+            let speaker = new Speaker({ channels: config.Get("channels"), sampleRate: config.Get("sampleRate"), bitDepth: config.Get("bitDepth") });
+
+            let playerStub = {
+              id: randomUUID(),
+              IsCancelled: false,
+              CancelledOn: null,
+              speaker
+            };
+            weakSelf.speakers.push(playerStub)
+
+            let segmentedAudioData = [];
+            let segmentSize = 32000;
+            let chunks = 0;
+            let chunk = 0;
+            // Make sure we get all the chunks
+            while (chunks < result.audioData.byteLength) {
+              if (playerStub.IsCancelled) {
+                return;
+              }
+              segmentedAudioData[chunk] = ( new Uint8Array(result.audioData.slice(chunks, chunks + segmentSize)) );
+              chunks += segmentSize;
+              chunk++;
+            }
+            segmentedAudioData[chunk] = ( new Uint8Array(result.audioData.slice(chunks, result.audioData.byteLength)) );
+
+            if (playerStub.IsCancelled) {
+              return;
+            }
+            // Readable.from(segmentedAudioData).pipe(speaker)
+            await pipeline(segmentedAudioData, new Transform({
+              transform(chunk, encoding, callback) {
+                if (playerStub.IsCancelled) {
+                  return;
+                }
+                this.push(chunk);
+                callback();
+              }
+            }), speaker);
+
             resolve(visemes);
           } else {
             if (config.Log > 1) {

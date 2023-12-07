@@ -76,6 +76,7 @@ export class BasicClient extends websocket.client {
         *   "key": "string"
         *  }
         **/ 
+        this.voiceManager.cancelPending();
         responseDetails.visemes = await this.voiceManager.Speak(objectMessage);
         this.sendVisemes(responseDetails);
       } catch (err) {

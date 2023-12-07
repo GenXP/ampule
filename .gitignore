@@ -2,4 +2,6 @@ node_modules
 config/local.json
 config/production.json
 config/test.json
-./*.wav
+*.wav
+.vs
+obj

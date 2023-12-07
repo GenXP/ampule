@@ -13,7 +13,7 @@ export class Configuration {
   }
 
   get Word() {
-    let _words = this.Get("words").split(" ")
+    let _words = this.Get("words").split(" ").map(word => word.trim()).filter(word => word.length > 0 && word != null);
     return _words[Math.floor(Math.random() * _words.length - 1)]
   }
 

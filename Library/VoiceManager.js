@@ -10,11 +10,13 @@ import { randomUUID } from "crypto";
 import { pipeline } from "stream/promises";
 import { Readable, Transform } from "stream";
 
+import { Worker, isMainThread, workerData } from "node:worker_threads";
+
 const config = new Configuration();
 
 export class VoiceManager {
   player = null;
-  speakers = []
+  workers = []
 
   constructor(player) {
     this.player = new Speaker({ channels: config.Get("channels"), sampleRate: config.Get("sampleRate"), bitDepth: config.Get("bitDepth") });
@@ -22,10 +24,8 @@ export class VoiceManager {
   }
 
   cancelPending() {
-    for (const speakerStub of this.speakers) {
-      // speaker.bufferStream.unpipe(speaker).end();
-      speakerStub.IsCancelled = true;
-      speakerStub.CancelledOn = new Date().getTime();
+    for (const speakerStub of this.workers) {
+      speakerStub.postMessage("Something")
     }
     // this.speakers = this.speakers.filter(speakerStub => Math.abs(speakerStub.CancelledOn - new Date().getTime()) > 1000);
   }
@@ -62,51 +62,64 @@ export class VoiceManager {
         async function (result) {
           if (result.reason === ResultReason.SynthesizingAudioCompleted) {
 
-            if (weakSelf.speakers.length > 1) {
-              weakSelf.speakers.forEach((speakerStub, i) => {
-                weakSelf.speakers[i].audio_handle = null;
-                weakSelf.speakers[i].speaker = null;
-              })
+            //if (weakSelf.speakers.length > 1) {
+            //  weakSelf.speakers.forEach((speakerStub, i) => {
+            //    weakSelf.speakers[i].audio_handle = null;
+            //    weakSelf.speakers[i].speaker = null;
+            //  })
+            //}
+
+            // let speaker = new Speaker({ channels: config.Get("channels"), sampleRate: config.Get("sampleRate"), bitDepth: config.Get("bitDepth") });
+
+            try {
+              let worker = new Worker("/Users/tingh/source/repos/genxp/ampule/Library/player.js", { workerData: result.audioData })
+              worker.on("error", (err) => { console.error(err) });
+              worker.on("exit", (code) => { if (code !== 0) { console.error(`Worker stopped with exit code ${code}`); } });
+              worker.on("message", (msg) => {
+                console.log(msg);
+                process.exit(0);
+              });
+              weakSelf.workers.push(worker);
+            } catch (e) {
+              console.error(e)
             }
 
-            let speaker = new Speaker({ channels: config.Get("channels"), sampleRate: config.Get("sampleRate"), bitDepth: config.Get("bitDepth") });
+            //let playerStub = {
+            //  id: randomUUID(),
+            //  IsCancelled: false,
+            //  CancelledOn: null,
+            //  speaker
+            //};
+            //weakSelf.speakers.push(playerStub)
 
-            let playerStub = {
-              id: randomUUID(),
-              IsCancelled: false,
-              CancelledOn: null,
-              speaker
-            };
-            weakSelf.speakers.push(playerStub)
+            //let segmentedAudioData = [];
+            //let segmentSize = 32000;
+            //let chunks = 0;
+            //let chunk = 0;
+            //// Make sure we get all the chunks
+            //while (chunks < result.audioData.byteLength) {
+            //  if (playerStub.IsCancelled) {
+            //    return;
+            //  }
+            //  segmentedAudioData[chunk] = ( new Uint8Array(result.audioData.slice(chunks, chunks + segmentSize)) );
+            //  chunks += segmentSize;
+            //  chunk++;
+            //}
+            //segmentedAudioData[chunk] = ( new Uint8Array(result.audioData.slice(chunks, result.audioData.byteLength)) );
 
-            let segmentedAudioData = [];
-            let segmentSize = 32000;
-            let chunks = 0;
-            let chunk = 0;
-            // Make sure we get all the chunks
-            while (chunks < result.audioData.byteLength) {
-              if (playerStub.IsCancelled) {
-                return;
-              }
-              segmentedAudioData[chunk] = ( new Uint8Array(result.audioData.slice(chunks, chunks + segmentSize)) );
-              chunks += segmentSize;
-              chunk++;
-            }
-            segmentedAudioData[chunk] = ( new Uint8Array(result.audioData.slice(chunks, result.audioData.byteLength)) );
-
-            if (playerStub.IsCancelled) {
-              return;
-            }
-            // Readable.from(segmentedAudioData).pipe(speaker)
-            await pipeline(segmentedAudioData, new Transform({
-              transform(chunk, encoding, callback) {
-                if (playerStub.IsCancelled) {
-                  return;
-                }
-                this.push(chunk);
-                callback();
-              }
-            }), speaker);
+            //if (playerStub.IsCancelled) {
+            //  return;
+            //}
+            //// Readable.from(segmentedAudioData).pipe(speaker)
+            //await pipeline(segmentedAudioData, new Transform({
+            //  transform(chunk, encoding, callback) {
+            //    if (playerStub.IsCancelled) {
+            //      return;
+            //    }
+            //    this.push(chunk);
+            //    callback();
+            //  }
+            //}), speaker);
 
             resolve(visemes);
           } else {

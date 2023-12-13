@@ -10,21 +10,15 @@ export class BasicClient extends websocket.client {
   voiceConfiguration = null;
   voiceManager = null;
 
-  constructor(voiceConfiguration) {
+  constructor() {
     super();
     this.on("connect", this.OnConnect.bind(this));
     this.on("connectFailed", this.OnConnectionFailed.bind(this));
-
-    this.voiceConfiguration = voiceConfiguration;
   }
 
   async OnConnect(connection) {
     if (connection == this.connection && this?.connection?.connected) {
-      return
-    }
-
-    if (!this.voiceConfiguration) {
-      return
+      return;
     }
 
     if (config.Log > 1) {
@@ -36,9 +30,7 @@ export class BasicClient extends websocket.client {
     this.connection.on("close", this.OnClose.bind(this));
     this.connection.on("message", this.onMessage.bind(this));
 
-    this.voiceManager = new VoiceManager(this.voiceConfiguration.speechConfig,
-                                         this.voiceConfiguration.audioConfig,
-                                          this.voiceConfiguration.player);
+    this.voiceManager = new VoiceManager();
   }
 
   OnConnectionFailed(error) {
@@ -46,21 +38,32 @@ export class BasicClient extends websocket.client {
       console.log(`Connect Error: ${error.toString()}`);
       console.error(error);
     }
+    process.exit();
   }
 
   OnError(error) {
-    console.log(`Error received from websocket: ${error.toString()}`);
-    console.error(error);
+    if (config.Log > 0) {
+      console.log(`Error received from websocket: ${error.toString()}`);
+      console.log(`Error received from websocket: ${error.toString()}`);
+      console.error(error);
+    }
+    process.exit(0);
   }
 
   OnClose() {
     if (config.Log > 1) {
       console.log("WebSocket Connection Closed");
     }
+    process.exit(0);
   }
+
   async onMessage(message) {
-    let objectMessage = message.utf8Data ? JSON.parse(message.utf8Data) : message.utf8Data;
+    let objectMessage = message.utf8Data
+      ? JSON.parse(message.utf8Data)
+      : message.utf8Data;
     let responseDetails = { visemes: [] };
+
+    this.voiceManager.cancelPending();
 
     if (objectMessage.hasOwnProperty("text")) {
       if (config.Log > 2) {
@@ -68,21 +71,20 @@ export class BasicClient extends websocket.client {
       }
       try {
         /**
-        *   Message {
-        *   "text": "string",
-        *   "locale": "string",
-        *   "region": "string",
-        *   "voice": "string",
-        *   "key": "string"
-        *  }
-        **/ 
-        this.voiceManager.cancelPending();
+         *   Message {
+         *   "text": "string",
+         *   "locale": "string",
+         *   "region": "string",
+         *   "voice": "string",
+         *   "key": "string"
+         *  }
+         **/
         responseDetails.visemes = await this.voiceManager.Speak(objectMessage);
         this.sendVisemes(responseDetails);
       } catch (err) {
         console.error(err);
       }
-      return
+      return;
     }
   }
 

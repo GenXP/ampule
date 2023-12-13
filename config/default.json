@@ -8,5 +8,6 @@
     "wsHost": "localhost",
     "wsPort": 8889,
     "logLevel": "info",
+    "AudioPlaybackStrategy": "fork",
     "words": "cow short loin fatback ham hock leberkas sausage frankfurter turkey capicola. ham cupim spare ribs shoulder doner hamburger t-bone rump brisket pork loin. bacon brisket flank picanha bresaola swine. bresaola short loin tail porchetta prosciutto. bacon biltong flank kielbasa andouille picanha. pancetta bacon short ribs, burgdoggen pig short loin frankfurter swine capicola sausage. beef tail pork chop burgdoggen venison pork belly pancetta alcatra landjaeger."
 }

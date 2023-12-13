@@ -2,47 +2,41 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch (Syntax Check)",
             "type": "node",
-            "request": "launch",
-            "program": "${workspaceFolder}/index.js",
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "console": "integratedTerminal"
-        },
-        {
             "name": "Launch Client Only",
-            "type": "node",
             "request": "launch",
             "program": "${workspaceFolder}/index.js",
             "args": ["--client"],
+            "envFile": "${workspaceFolder}/.env",
+            "cwd": "${workspaceFolder}",
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "console": "integratedTerminal"
+            "console": "externalTerminal"
         },
         {
-            "name": "Launch Client and Server",
             "type": "node",
+            "name": "Launch Client and Server",
             "request": "launch",
             "program": "${workspaceFolder}/index.js",
             "args": ["--client", "--server"],
+            "cwd": "${workspaceFolder}",
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "console": "integratedTerminal"
+            "console": "externalTerminal"
         },
         {
-            "name": "Launch Server Only",
             "type": "node",
+            "name": "Launch Server Only",
             "request": "launch",
             "program": "${workspaceFolder}/index.js",
             "args": ["--server"],
+            "cwd": "${workspaceFolder}",
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "console": "integratedTerminal"
+            "console": "externalTerminal"
         }
     ]
 }

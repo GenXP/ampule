@@ -1,17 +1,40 @@
 "use strict";
 import { ResultReason, SpeechSynthesizer, SpeechConfig, AudioConfig } from "microsoft-cognitiveservices-speech-sdk";
-import { PassThrough } from "stream";
 import { Configuration } from "./Configuration.js";
 import Speaker from "speaker";
+import { Readable } from "stream";
+import { Worker } from "node:worker_threads";
+import { fork } from "child_process";
 
 const config = new Configuration();
 
 export class VoiceManager {
   player = null;
-  speakers = new Set()
+  workers = []
+  forks = []
+  speakers = []
 
-  constructor(player) {
-    this.player = player;
+  constructor() {
+    this.player = new Speaker({ channels: config.Get("channels"), sampleRate: config.Get("sampleRate"), bitDepth: config.Get("bitDepth") });
+    this.workers = [];
+    this.forks = [];
+    this.speakers = [];
+  }
+
+  cancelPending() {
+    for (const worker of this.workers) {
+      worker.terminate();
+    }
+    this.workers = [];
+    for (const fork of this.forks) {
+      fork.kill();
+    }
+    this.forks = [];
+    for (const speaker of this.speakers) {
+      // NOTE: Does not work, speaker is still playing
+      speaker.end();
+    }
+    this.speakers = [];
   }
 
   async Speak(message) {
@@ -23,13 +46,8 @@ export class VoiceManager {
     speechConfig.speechSynthesisVoiceName = voicetype;
     const audioConfig = AudioConfig.fromAudioFileOutput(audioFile);
     let synthesizer = new SpeechSynthesizer(speechConfig, audioConfig);
-    let weakSelf = this;
 
-    // Cancel and current speaking
-    for (const speaker of Object.values(this.speakers)) {
-      speaker.close();
-      this.currentSpeakers.delete(speaker);
-    }
+    let weakSelf = this;
 
     return new Promise(function (resolve, reject) {
 
@@ -44,19 +62,45 @@ export class VoiceManager {
       synthesizer.visemeReceived = (s, e) => {
         if (config.Log > 1) {
           console.log("(Viseme), Audio offset: " + e.audioOffset / 10000 + "ms. Viseme ID: " + e.visemeId);
-          visemes.push({ offset: e.audioOffset, id: e.visemeId });
         }
+        visemes.push({ offset: e.audioOffset, id: e.visemeId });
       };
 
       synthesizer.speakSsmlAsync(ssml,
         async function (result) {
           if (result.reason === ResultReason.SynthesizingAudioCompleted) {
-            let player = new Speaker({ channels: config.Get("channels"), sampleRate: config.Get("sampleRate"), bitDepth: config.Get("bitDepth") });
-            weakSelf.speakers.add(player)
-            const bufferStream = new PassThrough();
-            bufferStream.end(Buffer.from(result.audioData));
-            bufferStream.pipe(player);
+
+            // NOTE: This is moved to before invoking child processes to account for any latency involved in launching new processes.
             resolve(visemes);
+
+            if (config.Get("AudioPlaybackStrategy") === "inline") {
+              console.warn("Inline audio playback is not recommended for production use, audio playback does not cancel when new audio is requested");
+              let speaker = new Speaker({ channels: config.Get("channels"), sampleRate: config.Get("sampleRate"), bitDepth: config.Get("bitDepth") });
+              Readable.from(result.audioData).pipe(speaker);
+              weakSelf.speakers.push(speaker);
+            } else if (config.Get("AudioPlaybackStrategy") === "worker") {
+              // Triggers a new worker for each audio file playback
+              let workerThread = new Worker(config.ResolveFilepath("Library/SpeakerWorker.js", import.meta.url), { workerData: result.audioData })
+              workerThread.on("error", (err) => { console.error(err) });
+              workerThread.on("exit", (code) => { if (code !== 0) { console.error(`Worker stopped with exit code ${code}`); } });
+              workerThread.on("message", (msg) => {
+                console.log(msg);
+                process.exit(0);
+              });
+              weakSelf.workers.push(workerThread);
+            } else if (config.Get("AudioPlaybackStrategy") === "fork") {
+              // The default is to use a completely separate process, forked from the main process, that is cancelled when the audio is done playing or new audio is requested
+              var forkedProcess = fork("Library/SpeakerFork.js", [audioFile], { cwd: process.cwd() });
+              forkedProcess.send("started");
+              forkedProcess.on("message", function (message) {
+                console.log(`Message from child.js: ${message}`);
+              });
+              forkedProcess.on('exit', function (code, signal) {
+                console.log('child process exited with ' +
+                  `code ${code} and signal ${signal}`);
+              });
+              weakSelf.forks.push(forkedProcess);
+            }
           } else {
             if (config.Log > 1) {
               console.error(`Speech synthesis canceled\n\tREASON: ${result.errorDetails}\nDid you set the speech resource key and region values?`);

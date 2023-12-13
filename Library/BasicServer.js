@@ -4,7 +4,9 @@ import websocket from "websocket";
 
 const config = new Configuration();
 const formats = [JSON.stringify({ "text": "##" }), JSON.stringify({ "message": "##" })]
+const MESSAGE_DELAY = 3000;
 
+let sendIndex = 0;
 /**
  * Waits for a connection and then randomly sends text strings to the client with messages of a variety of formats
  * (all json stringified); the client should respond with a list of visemes {visemes: [{offset: 0, id: 0}]
@@ -38,31 +40,41 @@ export class BasicServer extends websocket.server {
     let weakSelf = this;
     setTimeout(() => {
       weakSelf.sendRandomMessage(weakSelf.connection);
-    }, Math.random() * 10000);
+    }, Math.random() * 1000);
   }
 
   async sendRandomMessage(connection) {
-    let text = ""
+    if (connection.closeReasonCode > 0) {
+      return
+    }
+    let text = `${sendIndex} `
     while (text.length < 96) {
       text += config.Word + " ";
     }
+
+    let messageSendStart = new Date();
     let format = formats[Math.floor(Math.random() * formats.length)];
     let data = JSON.parse(format.replace("##", text));
     connection.sendUTF(JSON.stringify({ text: text }));
+    sendIndex++;
+    console.log(`SERVER: Sent message in ${new Date() - messageSendStart} ms`)
+
+    let weakSelf = this;
+    let delay = (Math.random() * MESSAGE_DELAY * 0.75) + (MESSAGE_DELAY * 0.25);
+    console.log(`SERVER: Sending next message in ${delay} ms`)
+    let start = new Date();
+    setTimeout(() => {
+      weakSelf.sendRandomMessage(this.connection);
+      console.log(`SERVER: Sent message in ${new Date() - start} ms`)
+    }, delay);
   }
 
   onMessage(message) {
     if (message.type === "utf8") {
-      console.log(`SERVER:\n\tReceived Message: ${message.utf8Data}`);
+      // console.log(`SERVER:\n\tReceived Message: ${message.utf8Data}`);
       try {
-        console.log(`SERVER:`, JSON.parse(message.utf8Data));
+        // console.log(`SERVER:`, JSON.parse(message.utf8Data));
 
-        let weakSelf = this;
-        let delay = (Math.random() * 7500) + 2500
-        console.log(`SERVER: Sending next message in ${delay} ms`)
-        setTimeout(() => {
-          weakSelf.sendRandomMessage(this.connection);
-        }, delay);
       } catch (error) { }
     } else if (message.type === "binary") {
       console.log(`SERVER: Received Binary Message of ${message.binaryData.length} bytes`);

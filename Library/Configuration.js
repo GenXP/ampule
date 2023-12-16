@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "fs";
 import { resolve } from "path";
 import { URL } from "url";
+import { Log } from "./Log.js";
 
 /**
  * @class Configuration
@@ -31,7 +32,7 @@ export class Configuration {
   // * Cache-invalidation
   // * Off-by-one errors
   get Log() {
-    const levels = "none, error, info, debug";
+    const levels = "none,error,info,debug".split(',');
     return levels.indexOf(this.data["logLevel"]) + 1;
   }
 
@@ -50,7 +51,7 @@ export class Configuration {
 
     this.data = Object.assign(defaultConfig, localConfig, productionConfig);
     if (this.Log > 3) {
-      console.log(this.data);
+      Log.Log("Configuration", this.data);
     }
   }
 

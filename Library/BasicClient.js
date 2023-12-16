@@ -1,5 +1,6 @@
 "use strict";
 import { Configuration } from "./Configuration.js";
+import { Log } from "./Log.js";
 import { VoiceManager } from "./VoiceManager.js";
 import websocket from "websocket";
 
@@ -22,7 +23,7 @@ export class BasicClient extends websocket.client {
     }
 
     if (config.Log > 1) {
-      console.log("WebSocket client connected");
+      Log.Log("BasicClient", "WebSocket client connected");
     }
 
     this.connection = connection;
@@ -35,16 +36,16 @@ export class BasicClient extends websocket.client {
 
   OnConnectionFailed(error) {
     if (config.Log > 0) {
-      console.log(`Connect Error: ${error.toString()}`);
-      console.error(error);
+      Log.Error("BasicClient", `Connect Error: ${error.toString()}`);
+      Log.Error("BasicClient", error);
     }
     process.exit();
   }
 
   OnError(error) {
     if (config.Log > 0) {
-      console.log(`Error received from websocket: ${error.toString()}`);
-      console.log(`Error received from websocket: ${error.toString()}`);
+      Log.Error("BasicClient", `Error received from websocket: ${error.toString()}`);
+      Log.Error("BasicClient", `Error received from websocket: ${error.toString()}`);
       console.error(error);
     }
     process.exit(0);
@@ -52,7 +53,7 @@ export class BasicClient extends websocket.client {
 
   OnClose() {
     if (config.Log > 1) {
-      console.log("WebSocket Connection Closed");
+      Log.Log("BasicClient", "WebSocket Connection Closed");
     }
     process.exit(0);
   }
@@ -67,7 +68,7 @@ export class BasicClient extends websocket.client {
 
     if (objectMessage.hasOwnProperty("text")) {
       if (config.Log > 2) {
-        console.log(`Received: ${objectMessage.text}`);
+        Log.Log("BasicClient", `Received: ${objectMessage.text}`);
       }
       try {
         /**
@@ -90,7 +91,7 @@ export class BasicClient extends websocket.client {
 
   sendVisemes(visemes) {
     if (config.Log > 1) {
-      console.log(`Sending Visemes: ${visemes}`);
+      Log.Log("BasicClient", `Sending Visemes: ${visemes}`);
     }
     this.connection.sendUTF(JSON.stringify({ visemes }));
   }

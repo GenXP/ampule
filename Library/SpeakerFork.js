@@ -2,6 +2,7 @@
 import Speaker from "speaker";
 import { createReadStream } from "fs";
 import { Reader } from "wav"
+import { Log } from "./Log.js";
 
 
 if (process.argv[2]) {
@@ -9,7 +10,7 @@ if (process.argv[2]) {
         process.exit();
     });
     process.on("message", function (message) {
-        console.log("message from main : " + message);
+        Log.Log("SpeakerFork", "message from main : " + message);
         process.send("message pingback from child " + message)
     })
     var filename = process.argv[2];

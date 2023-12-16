@@ -5,6 +5,7 @@ import Speaker from "speaker";
 import { Readable } from "stream";
 import { Worker } from "node:worker_threads";
 import { fork } from "child_process";
+import { Log } from "./Log.js";
 
 const config = new Configuration();
 
@@ -61,7 +62,7 @@ export class VoiceManager {
 
       synthesizer.visemeReceived = (s, e) => {
         if (config.Log > 1) {
-          console.log("(Viseme), Audio offset: " + e.audioOffset / 10000 + "ms. Viseme ID: " + e.visemeId);
+          Log.Log("VoiceManager", "(Viseme), Audio offset: " + e.audioOffset / 10000 + "ms. Viseme ID: " + e.visemeId);
         }
         visemes.push({ offset: e.audioOffset, id: e.visemeId });
       };
@@ -69,6 +70,11 @@ export class VoiceManager {
       synthesizer.speakSsmlAsync(ssml,
         async function (result) {
           if (result.reason === ResultReason.SynthesizingAudioCompleted) {
+
+            if (visemes[visemes.length - 1].id !== 0) {
+              Log.Log("VoiceManager", `Adding missing viseme 0 at ${result.duration}ms`);
+              visemes.push({ offset: result.duration, id: 0 });
+            }
 
             // NOTE: This is moved to before invoking child processes to account for any latency involved in launching new processes.
             resolve(visemes);
@@ -84,7 +90,7 @@ export class VoiceManager {
               workerThread.on("error", (err) => { console.error(err) });
               workerThread.on("exit", (code) => { if (code !== 0) { console.error(`Worker stopped with exit code ${code}`); } });
               workerThread.on("message", (msg) => {
-                console.log(msg);
+                Log.Log("VoiceManager", msg);
                 process.exit(0);
               });
               weakSelf.workers.push(workerThread);
@@ -93,11 +99,10 @@ export class VoiceManager {
               var forkedProcess = fork("Library/SpeakerFork.js", [audioFile], { cwd: process.cwd() });
               forkedProcess.send("started");
               forkedProcess.on("message", function (message) {
-                console.log(`Message from child.js: ${message}`);
+                Log.Log("VoiceManager", `Message from child.js: ${message}`);
               });
               forkedProcess.on('exit', function (code, signal) {
-                console.log('child process exited with ' +
-                  `code ${code} and signal ${signal}`);
+                Log.Log("VoiceManager", `child process exited with code ${code} and signal ${signal}`);
               });
               weakSelf.forks.push(forkedProcess);
             }

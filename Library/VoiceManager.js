@@ -40,8 +40,8 @@ export class VoiceManager {
 
   async Speak(message) {
     var audioFile = "tmp-audio.wav";
-    var speechKey = config.Get("key");
-    var speechRegion = config.Get("region");
+    var speechKey = message.key || config.Get("key");
+    var speechRegion = message.region || config.Get("region");
     var voicetype = message.voice || config.Get("voice");
     const speechConfig = SpeechConfig.fromSubscription(speechKey, speechRegion);
     speechConfig.speechSynthesisVoiceName = voicetype;

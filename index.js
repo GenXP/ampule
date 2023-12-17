@@ -33,27 +33,29 @@ function deployServer() {
 
 async function deployClient () {
   let client = new BasicClient();
+  const pollRate = 50;
+  const currentTimeout = FIVE_MINUTES;
   // 
   // Wait for the server to be up and running before connecting the client
   if (config.Log > 1) {
-    Log.Log("Main", `Waiting for socket server localhost:${config.Get("wsPort")} to be up and running...`);
+    Log.Log("Main", `Waiting for socket server`);
+    Log.Log("Main", `== Connection Pending: localhost:${config.Get("wsPort")}`)
+    Log.Log("Main", `== Polling: ${pollRate}ms`)
+    Log.Log("Main", `== Timeout: ${currentTimeout / 60000} minutes`)
   }
-  await waitUntilUsed(config.Get("wsPort"), 50, ONE_MINUTE);
+  await waitUntilUsed(config.Get("wsPort"), pollRate, currentTimeout);
   client.connect(`ws://${config.Get("wsHost")}:${config.Get("wsPort")}/`, "echo-protocol");
 }
 
 // If there is a process argument of "-s" or "--server" then deploy the server
 if (process.argv.indexOf("-s") > -1 || process.argv.indexOf("--server") > -1) {
   if (config.Log > 1) {
-    Log.Log("Main", `Deploying client...`);
+    Log.Log("Main", `Deploying server...`);
   }
   deployServer();
 }
 
 // If there is a process argument of "-c" or "--client" then deploy the client
 if (process.argv.indexOf("-c") > -1 || process.argv.indexOf("--client") > -1) {
-  if (config.Log > 1) {
-    Log.Log("Main", `Deploying client...`);
-  }
   deployClient();
 }

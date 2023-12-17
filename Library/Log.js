@@ -29,11 +29,13 @@ export class Log {
     this._logger = createLogger({
       level: 'info',
       format: format.combine(
-        format.timestamp(),
-        format.json()
+        format.timestamp({
+          format: 'YYYY-MM-DD HH:mm:ss'
+        }),
+        format.printf(info => `${info.timestamp} ${info.level}: ${info.message}`+(info.splat!==undefined?`${info.splat}`:" "))
       ),
       transports: [
-        new transports.Console()
+        new transports.Console({timestamp: true})
       ]
     });
 
@@ -47,8 +49,6 @@ export class Log {
           format.json()
         )
       }))
-    } else {
-      console.log(`No AMPULE_LOKI_URL set, not logging to Loki`);
     }
   }
 

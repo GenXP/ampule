@@ -50,6 +50,10 @@ export class VoiceManager {
 
     let weakSelf = this;
 
+    if (config.Log > 1) {
+      Log.Log("VoiceManager", {speechKey, speechRegion, voicetype});
+    }
+
     return new Promise(function (resolve, reject) {
 
       const ssml = `<speak version='1.0' xml:lang='en-US' xmlns='http://www.w3.org/2001/10/synthesis' xmlns:mstts='http://www.w3.org/2001/mstts'> \r\n \

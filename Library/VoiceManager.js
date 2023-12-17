@@ -49,7 +49,9 @@ export class VoiceManager {
     let synthesizer = new SpeechSynthesizer(speechConfig, audioConfig);
 
     let weakSelf = this;
-    Log.Log("VoiceManager", {speechKey, speechRegion, voicetype});
+    console.log(speechKey);
+    console.log(speechRegion);
+    console.log(voicetype);
 
     return new Promise(function (resolve, reject) {
 

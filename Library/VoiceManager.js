@@ -70,7 +70,8 @@ export class VoiceManager {
         visemes.push({ offset: e.audioOffset, id: e.visemeId });
       };
 
-      synthesizer.speakSsmlAsync(ssml,
+      var spokenssml = message.ssml || ssml;
+      synthesizer.speakSsmlAsync(spokenssml,
         async function (result) {
           if (result.reason === ResultReason.SynthesizingAudioCompleted) {
 

@@ -66,9 +66,14 @@ export class BasicClient extends websocket.client {
 
     this.voiceManager.cancelPending();
 
-    if (objectMessage.hasOwnProperty("text")) {
+    if (objectMessage.hasOwnProperty("text") || objectMessage.hasOwnProperty("ssml")) {
       if (config.Log > 2) {
-        Log.Log("BasicClient", `Received: ${objectMessage.text}`);
+        if(objectMessage.hasOwnProperty("text")){
+          Log.Log("BasicClient", `Text Received: ${objectMessage.text}`);
+        }
+        if(objectMessage.hasOwnProperty("ssml")){
+          Log.Log("BasicClient", `SSML Received: ${objectMessage.ssml}`);
+        }
       }
       try {
         /**

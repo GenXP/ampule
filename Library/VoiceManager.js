@@ -46,7 +46,7 @@ export class VoiceManager {
     var voicetype = message.voice || config.Get("voice");
     const speechConfig = SpeechConfig.fromSubscription(speechKey, speechRegion);
     speechConfig.speechSynthesisVoiceName = voicetype;
-    const audioConfig = AudioConfig.fromAudioFileOutput(audioFile);
+    const audioConfig = AudioConfig.fromAudioFileOutput(config.Get("audioWriteFolder") + audioFile);
     let synthesizer = new SpeechSynthesizer(speechConfig, audioConfig);
 
     let weakSelf = this;

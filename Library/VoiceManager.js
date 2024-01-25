@@ -39,7 +39,8 @@ export class VoiceManager {
   }
 
   async Speak(message) {
-    var audioFile = "tmp-audio.wav";
+    //var audioName = message.id || "tmp-audio";
+    var audioFile = 'tmp-audio.wav';
     var speechKey = message.key || config.Get("key");
     var speechRegion = message.region || config.Get("region");
     var voicetype = message.voice || config.Get("voice");
@@ -109,6 +110,8 @@ export class VoiceManager {
                 Log.Log("VoiceManager", `child process exited with code ${code} and signal ${signal}`);
               });
               weakSelf.forks.push(forkedProcess);
+            } else if (config.Get("AudioPlaybackStrategy") == "none"){
+
             }
           } else {
             if (config.Log > 1) {

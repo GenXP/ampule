@@ -50,14 +50,18 @@ export class VoiceManager {
     const speechConfig = SpeechConfig.fromSubscription(speechKey, speechRegion);
     speechConfig.speechSynthesisVoiceName = voicetype;
 
-    if(GAMEEXEPATH){
-      // Use environment vars
-      var expPath = "/home/user/" + EXPERIENCEID + "/" + GAMEEXEPATH + "/Content/Movies/";
-      const audioConfig = AudioConfig.fromAudioFileOutput(expPath + audioFile);
+    var audioConfig;
+
+    Log.Log("VoiceManager", `ExperienceID for Ampuee ${EXPERIENCEID}`);
+
+    if(GAMEEXEPATH === null || GAMEEXEPATH === undefined){
+      // Use config path
+      audioConfig = AudioConfig.fromAudioFileOutput(config.Get("audioWriteFolder") + audioFile);
     }
     else{
-      // Use config path
-      const audioConfig = AudioConfig.fromAudioFileOutput(config.Get("audioWriteFolder") + audioFile);
+      // Use environment vars
+      var expPath = "/home/user/" + EXPERIENCEID + "/" + GAMEEXEPATH + "/Content/Movies/";
+      audioConfig = AudioConfig.fromAudioFileOutput(expPath + audioFile);
     }
     let synthesizer = new SpeechSynthesizer(speechConfig, audioConfig);
 

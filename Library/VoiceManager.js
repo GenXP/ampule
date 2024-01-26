@@ -9,6 +9,9 @@ import { Log } from "./Log.js";
 
 const config = new Configuration();
 
+const EXPERIENCEID = process.env.EXPERIENCEID;
+const GAMEEXEPATH = process.env.GAMEEXEPATH;
+
 export class VoiceManager {
   player = null;
   workers = []
@@ -46,7 +49,16 @@ export class VoiceManager {
     var voicetype = message.voice || config.Get("voice");
     const speechConfig = SpeechConfig.fromSubscription(speechKey, speechRegion);
     speechConfig.speechSynthesisVoiceName = voicetype;
-    const audioConfig = AudioConfig.fromAudioFileOutput(config.Get("audioWriteFolder") + audioFile);
+
+    if(GAMEEXEPATH){
+      // Use environment vars
+      var expPath = "/home/user/" + EXPERIENCEID + "/" + GAMEEXEPATH + "/Content/Movies/";
+      const audioConfig = AudioConfig.fromAudioFileOutput(expPath + audioFile);
+    }
+    else{
+      // Use config path
+      const audioConfig = AudioConfig.fromAudioFileOutput(config.Get("audioWriteFolder") + audioFile);
+    }
     let synthesizer = new SpeechSynthesizer(speechConfig, audioConfig);
 
     let weakSelf = this;
